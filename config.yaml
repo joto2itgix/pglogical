@@ -1,0 +1,26 @@
+---
+db_list:
+  - db: 
+    name: "test1"
+    insert: "true"
+    update: "true"
+    delete: "false"
+    truncate: "false"
+    replication_user: postgresql
+    ignore_tables: 
+    - "asd1"
+    - "asd2"
+src_db:
+  host: "10.200.200.10"
+  user: "postgres"
+  pass: "test1234"
+  port: "5432"
+dest_db:
+  host: "10.200.200.20"
+  user: "postgres"
+  pass: "test1234"
+  port: "5432"
+
+exporter:
+  scrape_frequency: 40
+  port: 9393

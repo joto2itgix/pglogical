@@ -1,0 +1,58 @@
+services:
+  psql1:
+    image: pglogical:15.2
+    # command: 
+    volumes:
+      - /opt/volumes/prometheus/data:/prometheus
+      - ./data/pgsql1:/var/lib/postgresql/data
+      - /tmp:/tmp
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: test1234
+      PGDATA: /var/lib/postgresql/data/pgdata
+    networks:
+      pglogical:
+        ipv4_address: 10.200.200.10
+
+  psql2:
+    image: pglogical:15.2
+    # command: 
+    volumes:
+      - /opt/volumes/prometheus/data:/prometheus
+      - ./data/pgsql2:/var/lib/postgresql/data
+      - /tmp:/tmp
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: test1234
+      PGDATA: /var/lib/postgresql/data/pgdata
+    networks:
+      pglogical:
+        ipv4_address: 10.200.200.20
+  
+  grafana:
+    image: grafana/grafana
+    restart: always
+    volumes:
+      - ./data/grafana:/var/lib/grafana
+    networks:
+      pglogical:
+        ipv4_address: 10.200.200.30
+
+  prometheus:
+    image: prom/prometheus
+    restart: always
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      pglogical:
+        ipv4_address: 10.200.200.31
+
+networks:
+  pglogical:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.200.200.0/24
+
+# docker run -it --rm --network pglogical_pglogical postgres psql -h 10.200.200.10 -U postgres

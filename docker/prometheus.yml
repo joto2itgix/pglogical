@@ -1,0 +1,18 @@
+scrape_configs:
+  # The job name is added as a label `job=<job_name>` to any timeseries scraped from this config.
+  - job_name: 'prometheus'
+
+    # metrics_path defaults to '/metrics'
+    # scheme defaults to 'http'.
+
+    static_configs:
+    - targets: ['10.200.200.31:9090']
+    
+  
+  - job_name: 'pglogical_exporter'
+    metrics_path: /metrics
+    scheme: http
+    scrape_interval: 30s
+    scrape_timeout:  5s
+    static_configs:
+    - targets: ['10.200.200.1:9393']
