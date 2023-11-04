@@ -1,0 +1,103 @@
+-- PRODUCER
+docker exec -i -u postgres docker-psql1-1 psql -c "create database airsmall;"
+docker exec -i -u postgres docker-psql1-1 psql airsmall < /tmp/demo-small-en-20170815.sql
+docker exec -i -u postgres docker-psql1-1 pg_dump --schema-only --file=/tmp/airsmall-schema.sql airsmall
+docker exec -it -u postgres docker-psql1-1 psql
+
+\c airsmall
+CREATE EXTENSION pglogical;
+SELECT pglogical.create_node(
+    node_name := 'airsmall-node-m',
+    dsn := 'host=10.200.200.10 port=5432 dbname=airsmall'
+);
+-- SELECT pglogical.drop_node('airsmall-node-m');
+SELECT * FROM pglogical.node;
+
+
+SELECT pglogical.create_replication_set('airsmall_set', true, true, true, false);
+-- pglogical.create_replication_set(set_name name, replicate_insert bool, replicate_update bool, replicate_delete bool, replicate_truncate bool)
+
+SELECT * FROM pglogical.replication_set;
+
+SELECT pglogical.replication_set_add_table('airsmall_set', 'ticket_flights', true);
+SELECT pglogical.replication_set_add_table('airsmall_set', 'tickets', true);
+-- SELECT pglogical.replication_set_add_sequence('airsmall-set', 'customer_session_statistics_aggregated_seq', true);
+
+
+
+
+-- SUBSCRIPTION
+docker exec -i -u postgres docker-psql2-1 psql -c "create database airsmall;"
+docker exec -i -u postgres docker-psql2-1 psql airsmall < /tmp/airsmall-schema.sql
+docker exec -it -u postgres docker-psql2-1 psql
+
+\c airsmall
+
+CREATE EXTENSION pglogical;
+SELECT pglogical.create_node(
+    node_name := 'airsmall-node-s',
+    dsn := 'host=10.200.200.20 port=5432 dbname=airsmall'
+);
+
+SELECT pglogical.create_subscription(
+    subscription_name := 'airsmall_sub',
+    provider_dsn := 'host=10.200.200.10 port=5432 dbname=airsmall',
+    replication_sets := array['airsmall_set'],
+    synchronize_structure := false, 
+    synchronize_data := false
+);
+-- SELECT pglogical.drop_subscription('airsmall_sub');
+SELECT * from pglogical.subscription;
+SELECT pglogical.alter_subscription_synchronize('airsmall_sub', false);
+-- pglogical.alter_subscription_synchronize(subscription_name name, truncate bool)
+SELECT pglogical.alter_subscription_resynchronize_table('airsmall_sub', 'ticket_flights');
+SELECT pglogical.alter_subscription_resynchronize_table('airsmall_sub', 'tickets');
+
+ALTER TABLE ticket_flights DROP CONSTRAINT ticket_flights_flight_id_fkey;
+ALTER TABLE ticket_flights DROP CONSTRAINT ticket_flights_ticket_no_fkey;
+ALTER TABLE tickets DROP CONSTRAINT tickets_book_ref_fkey;
+ALTER TABLE boarding_passes DROP CONSTRAINT boarding_passes_ticket_no_fkey;
+
+truncate tickets;
+
+
+
+
+
+-- DEBUG
+SELECT * FROM pg_replication_slots;
+SELECT * FROM pg_stat_replication;
+SELECT * FROM pglogical.node;
+SELECT * FROM pglogical.replication_set;
+
+SELECT * FROM pglogical.node;
+SELECT * from pglogical.show_subscription_status();
+SELECT * from pglogical.subscription;
+SELECT * from pglogical.local_sync_status;
+
+
+
+
+
+
+
+
+
+
+
+
+
+SELECT pglogical.drop_subscription('test1_subscription');
+
+SELECT pglogical.create_subscription(
+    subscription_name := 'test1_subscription',
+    provider_dsn := 'host=10.200.200.10 port=5432 dbname=test1',
+    replication_sets := array['test1_set'],
+    synchronize_structure := false, 
+    synchronize_data := false
+);
+
+SELECT pglogical.alter_subscription_synchronize('test1_subscription', true);
+
+
+SELECT pg_replication_slot_advance('pgl_airsmall_airsmall_node_m_airsmall_sub', '0/90AC6068');
